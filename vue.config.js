@@ -6,14 +6,15 @@ const { defineConfig } = require("@vue/cli-service");
 module.exports = defineConfig({
   outputDir: "dist",
   indexPath: "index.html",
-  transpileDependencies: false,
+//   transpileDependencies: false,
   productionSourceMap: true,
-  runtimeCompiler: true,
-  lintOnSave: true,
+//   runtimeCompiler: true,
+  lintOnSave: false,
   parallel: true,
   integrity: false,
   publicPath: process.env.NODE_ENV === "production" ? "/vue-app/" : "/",
   configureWebpack: {
+    devtool:false,
     devServer: {
       onBeforeSetupMiddleware: ({ app }) => {
         app.use(

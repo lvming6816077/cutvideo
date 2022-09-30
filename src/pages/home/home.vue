@@ -1,8 +1,8 @@
 <template>
     <div class="home-container">
         <topheader />
-        <div class="uploader-container">
-            <div class="uploader-wrap" @click="goUpload" v-show="!duration">
+        <div class="uploader-container"   v-show="!duration">
+            <div class="uploader-wrap" @click="goUpload">
                 <div class="uploader"></div>
                 <p class="title">点击上传视频文件.mp4</p>
                 <input
@@ -18,9 +18,7 @@
                 />
             </div>
         </div>
-        <div class="tool-container">
 
-        </div>
         <div class="video-container" v-show="duration">
             
             <video
@@ -30,25 +28,15 @@
                 @loadedmetadata="loadedmetadata"
             />
         </div>
-
-        <div class="controls-images-container">
-            <div class="controls-images-inner">
-                <div class="divider-left">
-
-                </div>
-                <div class="divider-right">
-
-                </div>
-                <div class="images">
-                    <img
-                        v-for="(item, index) in imageList"
-                        :key="index"
-                        class="img-item"
-                        :src="item"
-                    />
-                </div>
-            </div>
+        <div class="tool-container">
+            <tool></tool>
         </div>
+
+        <div class="screenshot-container">
+            <screenshot :imageList="imageList" @changeTimeline="changeTimeline"/>
+        </div>
+        
+
     </div>
 </template>
 
@@ -56,10 +44,13 @@
 import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
 import { defineComponent, ref, onMounted, reactive } from "vue";
 import topheader from "./components/topheader/topheader.vue"
+import tool from "./components/tool/tool.vue"
+import screenshot from "./components/screenshot/screenshot.vue"
 
+import _ from "lodash"
 export default defineComponent({
     name: "Home",
-    components:{topheader},
+    components:{topheader,screenshot,tool},
     setup() {
         // app state
         const ffmpeg = createFFmpeg({
@@ -70,7 +61,7 @@ export default defineComponent({
         let videoSrc = ref(null);
         let videoRef = ref(null);
         let duration = ref(0);
-        let imageList = reactive(['http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg']);
+        let imageList = reactive([])//reactive(['http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg','http://localhost:8080/img/upload.6f6dfc9a.svg']);
         let initFfmpegFlag = ref(false)
         const inputFile = ref(null);
         const imgCount = 11;
@@ -92,6 +83,10 @@ export default defineComponent({
             videoSrc.value = URL.createObjectURL(videoFile);
             
         };
+
+        const changeTimeline = _.throttle((v)=>{
+            videoRef.value.currentTime = duration.value * v
+        },30)
 
 
         // ffmpeg -i cv.mp4 -vf fps=0.2 F:\ffmpegTest\img\out%d.png
@@ -130,7 +125,7 @@ export default defineComponent({
         }
 
         async function initFfmpeg(){
-            // await ffmpeg.load();
+            await ffmpeg.load();
             initFfmpegFlag.value = true
             console.log('ffmpeg加载成功完成')
         }
@@ -146,6 +141,7 @@ export default defineComponent({
             message,
             duration,
             goUpload,
+            changeTimeline,
             changeFile,
         };
     },
@@ -181,9 +177,16 @@ export default defineComponent({
     background-color: #202023;;
     display: flex;
     justify-content: center;
+    padding-bottom: 100px;
+    padding-top: 40px;
+    height: 480px;
+    box-sizing: border-box;
 }
 .video-container {
-    margin-top: 30px;
+    padding-bottom: 100px;
+    padding-top: 40px;
+    height: 480px;
+    box-sizing: border-box;
     .video-prev {
         width: 600px;
     }
@@ -194,85 +197,12 @@ export default defineComponent({
     background-image: url(./img/upload.svg);
     background-size: cover;
 }
-
-.controls-images-container {
+.tool-container {
     border-top: 2px solid #121212;
-    padding-top: 40px;
-    padding-bottom: 40px;
-    display: flex;
-    justify-content: center;
-    margin-top: 30px;
-    .img-item {
-        width: 80px;
-    }
-    .controls-images-inner {
-        position: relative;
-    }
-    .divider-left {
-        width: 10px;
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        background-color: #00c1cd;
-        pointer-events: all;
-        cursor: ew-resize;
-        box-sizing: border-box;
-
-        
-
-        transform: translateX(-100%);
-        border-top-left-radius: 4px;
-        border-bottom-left-radius: 4px;
-        border-bottom-right-radius: 0;
-        border-top-right-radius: 0;
-
-        &::before {
-            background-repeat: no-repeat;
-            background-position: 50%;
-            content: " ";
-            width: 3px;
-            height: 50px;
-            background-image: url(./img/divider-dot.svg);
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%,-50%);
-            margin-top: 0;
-        }
-    }
-    .divider-right {
-        width: 10px;
-        position: absolute;
-        left:30px;
-        top: 0;
-        bottom: 0;
-        background-color: #00c1cd;
-        pointer-events: all;
-        cursor: ew-resize;
-        box-sizing: border-box;
-
-        
-
-        border-top-left-radius: 0px;
-        border-bottom-left-radius: 0px;
-        border-bottom-right-radius: 4px;
-        border-top-right-radius: 4px;
-
-        &::before {
-            background-repeat: no-repeat;
-            background-position: 50%;
-            content: " ";
-            width: 3px;
-            height: 50px;
-            background-image: url(./img/divider-dot.svg);
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%,-50%);
-            margin-top: 0;
-        }
-    }
 }
 
+.screenshot-container {
+    min-height: 300px;
+}
 
 </style>
