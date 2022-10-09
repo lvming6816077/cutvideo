@@ -1,35 +1,35 @@
 <template>
     <div class="controls-images-container">
-        <timeline :width="880" @changeTimeline="changeTimeline" v-if="imageList.length"/>
-        <ruler :width="880"/>
+        <timeline :width="880" :max="max" @changeTimeline="changeTimeline" v-if="imageList.length"/>
+        <ruler :width="880" :max="max"/>
         <div class="controls-images-inner" v-if="imageList.length">
-            <span v-for="(item,index) in dividerList.list" :key="index" :class="curIndex == index ? 'active':''">
-                <div class="divider" :style="{left:item.dividerLeft.tranX+'px',width:(item.dividerRight.tranX-item.dividerLeft.tranX)+'px'}" @click="curIndex = index"></div>
+            <span v-for="(item,index) in dividerList.list" :key="index" :class="curIndex == index ? 'active':''"  class="inner-item">
+                <div class="divider" @click="dividerClick(index)" :style="{left:item.dividerLeft.tranX+'px',width:(item.dividerRight.tranX-item.dividerLeft.tranX)+'px',height:'60px'}">
+                    <div class="divider-inner"></div>
+                    <imglists :imageList="imageList" :dwidth="item.dividerRight.tranX-item.dividerLeft.tranX" :dx="item.dividerLeft.tranX"/>
+                </div>
                 <div class="divider-left" @mousedown="mousedownLeft(index,$event)" :style="{transform:'translateX('+item.dividerLeft.tranX+'px)'}"></div>
                 <div class="divider-right" @mousedown="mousedownRight(index,$event)" :style="{transform:'translateX('+item.dividerRight.tranX+'px)'}"></div>
+                
             </span>
-            <div class="images">
-                <img
-                    v-for="(item, index) in imageList"
-                    :key="index"
-                    class="img-item"
-                    :src="item"
-                />
-            </div>
+
         </div>
     </div>
 </template>
 
 <script>
-import { defineComponent, ref, onMounted, reactive, onUnmounted } from "vue";
+import { defineComponent, ref, onMounted, reactive, onUnmounted,toRaw,computed } from "vue";
 import _ from "lodash"
 import ruler from "../ruler/ruler.vue"
 import timeline from "../timeline/timeline.vue"
+import imglists from "./imglists.vue"
 import mitt from "@/utils/mitt";
+import { v4 as uuidv4 } from 'uuid';
+import Vuex from 'vuex'
 
 export default defineComponent({
     name: "screenshot",
-    components:{ruler,timeline},
+    components:{ruler,timeline,imglists},
     props: {
         imageList:{
             type:Array,
@@ -37,13 +37,27 @@ export default defineComponent({
         },
     },
     setup(props,context) {
-        const max = 880-4,min = 0
+        const store = Vuex.useStore()
+        let min = 0
+        let max = ref(880)
         let curIndex = ref(0)
         let timelinex = 0
         const changeTimeline=(v,x)=>{
             timelinex = x
-            context.emit('changeTimeline',v)
+            context.emit('changeTimeline',v,x)
         }
+
+        const handleCurDivider = () => {
+            // let max = 880,min = 0
+            let o = dividerList.list[curIndex.value]
+            if (!o) return null
+            o.dividerLeft.endXTime = o.dividerLeft.endX/(max.value-min)
+            o.dividerRight.endXTime = o.dividerRight.endX/(max.value-min)
+            return {
+                ...toRaw(o),
+            }
+        }
+
 
         let dividerList = reactive({
             list:[]
@@ -60,16 +74,44 @@ export default defineComponent({
             dragFlag:false,
             startX:0,
             moveX:0,
-            endX:max,
-            tranX:max
+            endX:max.value,
+            tranX:max.value
         }
-        dividerList.list.push({dividerLeft,dividerRight})
+        dividerList.list.push({dividerLeft,dividerRight,id:uuidv4()})
+
+        store.dispatch('setCurDivider',handleCurDivider())
 
         mitt.on("split",()=>{
-            split()
+            splitD()
+        })
+        mitt.on("remove",()=>{
+            deleteD()
         })
 
-        const split = ()=>{
+        const deleteD =()=>{
+            
+            var deleteItem = dividerList.list[curIndex.value]
+            var deleteWidth = Math.abs(deleteItem.dividerLeft.endX-deleteItem.dividerRight.endX)
+            for (var i = 0 ; i < dividerList.list.length ; i++) {
+                var cur = dividerList.list[i]
+                if (i > curIndex.value) {
+                    cur.dividerLeft.endX -= deleteWidth
+                    cur.dividerLeft.tranX -= deleteWidth
+                    cur.dividerRight.endX -= deleteWidth
+                    cur.dividerRight.tranX -= deleteWidth
+                }
+            }
+            dividerList.list.splice(curIndex.value,1)
+            max.value = max.value-deleteWidth
+
+            setTimeout(()=>{
+                curIndex.value = curIndex.value-1
+                store.dispatch('setCurDivider',handleCurDivider())
+                store.dispatch('addDeleteDivider',deleteItem)
+            },200)
+        }
+
+        const splitD = ()=>{
 
             var x = timelinex
             var array = []
@@ -77,6 +119,7 @@ export default defineComponent({
                 var cur = dividerList.list[i]
                 if (cur.dividerLeft.endX < x && cur.dividerRight.endX>x) {
                     array.push({
+                        id:uuidv4(),
                         dividerLeft:{
                             dragFlag:false,
                             startX:0,
@@ -93,6 +136,7 @@ export default defineComponent({
                         }
                     })
                     array.push({
+                        id:uuidv4(),
                         dividerLeft:{
                             dragFlag:false,
                             startX:0,
@@ -113,9 +157,9 @@ export default defineComponent({
                     array.push(cur)
                 }
             }
-            dividerList.list = array
             
-            console.log(dividerList.list)
+            dividerList.list = array
+            store.dispatch('setCurDivider',handleCurDivider())
         }
 
 
@@ -139,15 +183,17 @@ export default defineComponent({
             
             if (dividerLeft.dragFlag) {
                 let dis = e.clientX-dividerLeft.startX
-                dividerLeft.tranX = Math.min(Math.max(dis+dividerLeft.endX,min),max)
+                dividerLeft.tranX = Math.min(Math.max(dis+dividerLeft.endX,min),max.value)
 
             }
             if (dividerRight.dragFlag) {
 
                 let dis = e.clientX-dividerRight.startX
-                dividerRight.tranX = Math.min(Math.max(dis+dividerRight.endX,min),max)
+                dividerRight.tranX = Math.min(Math.max(dis+dividerRight.endX,min),max.value)
 
             }
+            e.preventDefault()
+            e.stopPropagation()
         }
         const mouseup = ()=>{
             
@@ -196,14 +242,21 @@ export default defineComponent({
             document.removeEventListener('mouseup',mouseup)
         })
 
+        const dividerClick = (index)=>{
+            curIndex.value = index
+            store.dispatch('setCurDivider',handleCurDivider())
+        }
+
 
         return {
             changeTimeline,
+            dividerClick,
             curIndex,
             dividerList,
-            split,
+            max,
             mousedownLeft,
-            mousedownRight
+            mousedownRight,
+            handleCurDivider
         };
     },
 });
@@ -218,45 +271,56 @@ export default defineComponent({
     flex-direction: column;
     align-items: center;
     display: flex;
-    .img-item {
-        width: 80px;
-        float: left;
-        height: 60px;
-        object-fit: cover;
-        user-select: none;
-        opacity: 0.8;
-    }
-    .images {
-        overflow: hidden;
-        user-select: none;
-    }
+
     .controls-images-inner {
         position: relative;
         margin-top: 70px;
+        width:880px;
+        background-color: #2a2a2e;
+        height: 60px;
     }
-    span.active {
-        .divider,.divider-left,.divider-right {
+
+    .inner-item.active {
+        .divider-inner,.divider-left,.divider-right {
             opacity:  1;
             z-index: 999;
+        }
+        :deep(.img-wrap) {
+            opacity:  1;
         }
     }
     .divider {
         position: absolute;
         left: 0;
         top:0;
-        bottom: 0;
+        bottom: 0px;
+        right: 0;
+        transform: translateX(4px);
+        
+        z-index: 9;
+    }
+    .divider-inner {
+        position: absolute;
+        left:0;
+        right:0;
+        bottom:0;
+        top:0;
+        z-index: 3;
+        background-color: rgba(255, 0, 0, 0.19);
+        
         border-top: 2px solid #00c1cd;
         border-bottom: 2px solid #00c1cd;
-        opacity:  0;
         border-radius: 3px;
-        transform: translateX(4px);
+        pointer-events: none;
+        
+        opacity:  0;
     }
     .divider-left {
         opacity:  0;
         width: 10px;
         position: absolute;
         top: 0;
-        bottom: 0;
+        bottom: 0px;
         background-color: #00c1cd;
         pointer-events: all;
         cursor: ew-resize;
@@ -291,7 +355,7 @@ export default defineComponent({
         position: absolute;
         left:0px;
         top: 0;
-        bottom: 0;
+        bottom: 0px;
         background-color: #00c1cd;
         pointer-events: all;
         cursor: ew-resize;

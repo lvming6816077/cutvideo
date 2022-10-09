@@ -13,8 +13,10 @@
     "core-js": "^3.25.2",
     "lodash": "^4.17.21",
     "mitt": "^3.0.0",
+    "uuid": "^9.0.0",
     "vue": "^3.2.39",
-    "vue-router": "^4.1.5"
+    "vue-router": "^4.1.5",
+    "vuex": "^4.0.2"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.18.9",

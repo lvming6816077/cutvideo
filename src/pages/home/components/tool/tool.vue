@@ -1,7 +1,11 @@
 <template>
     <div class="wrap" >
-        <div class="split item" @click="split"></div>
-        <div class="delete item" @click="deleteF"></div>
+        <div class="item-wrap">
+            <div class="split item" @click="split"></div>
+        </div>
+        <div class="item-wrap">
+            <div class="delete item" @click="deleteF"></div>
+        </div>
     </div>
 </template>
 
@@ -20,7 +24,7 @@ export default defineComponent({
             mitt.emit("split")
         }
         const deleteF = ()=>{
-
+            mitt.emit("remove")
         }
         return {
             split,
@@ -42,7 +46,14 @@ export default defineComponent({
         width:25px;
         height: 25px;
         background-size:cover;
+    }
+    .item-wrap {
+        padding: 3px;
         margin-right: 10px;
+        border-radius: 2px;
+        &:hover{
+            background-color: #000;
+        }
     }
     .split {
 

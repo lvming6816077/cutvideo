@@ -33,7 +33,7 @@
         </div>
 
         <div class="screenshot-container">
-            <screenshot :imageList="imageList" @changeTimeline="changeTimeline"/>
+            <screenshot  :imageList="imageList" @changeTimeline="changeTimeline" ref="screenshotRef"/>
         </div>
         
 
@@ -42,16 +42,19 @@
 
 <script>
 import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
-import { defineComponent, ref, onMounted, reactive } from "vue";
+import { defineComponent, ref, onMounted, reactive,computed } from "vue";
 import topheader from "./components/topheader/topheader.vue"
 import tool from "./components/tool/tool.vue"
 import screenshot from "./components/screenshot/screenshot.vue"
+import mitt from "@/utils/mitt";
+import Vuex from 'vuex'
 
 import _ from "lodash"
 export default defineComponent({
     name: "Home",
     components:{topheader,screenshot,tool},
     setup() {
+        const store = Vuex.useStore()
         // app state
         const ffmpeg = createFFmpeg({
             log: true,
@@ -65,11 +68,13 @@ export default defineComponent({
         let initFfmpegFlag = ref(false)
         const inputFile = ref(null);
         const imgCount = 11;
+        let screenshotRef = ref(null);
         
 
         const loadedmetadata = () => {
 
             duration.value = videoRef.value.duration;
+            store.dispatch('setVideoDuration',duration.value)
             let file = inputFile.value.files[0]
             var unit = duration.value / imgCount;
             transcodeImg(file,unit);
@@ -84,8 +89,19 @@ export default defineComponent({
             
         };
 
-        const changeTimeline = _.throttle((v)=>{
-            videoRef.value.currentTime = duration.value * v
+        let deleteDivider = computed(() => store.state.deleteDivider)
+        const changeTimeline = _.throttle((v,x)=>{
+            var newV = duration.value * v;
+            for (var i = 0 ; i < deleteDivider.value.length ; i++) {
+                let start = duration.value * deleteDivider.value[i].dividerLeft.endXTime
+                let end = duration.value * deleteDivider.value[i].dividerRight.endXTime
+                if (newV > start && newV < end) {
+                    newV = end
+                }
+            }
+            
+            
+            videoRef.value.currentTime = newV
         },30)
 
 
@@ -96,6 +112,9 @@ export default defineComponent({
             var inname = "test.mp4";
             var endStr = "testout.png";
             var outname = "a%d" + endStr;
+
+            imageList.length = 0
+            removeImg(endStr)
 
             ffmpeg.FS("writeFile", inname, await fetchFile(file));
             
@@ -129,6 +148,48 @@ export default defineComponent({
             initFfmpegFlag.value = true
             console.log('ffmpeg加载成功完成')
         }
+        mitt.on("remove",()=>{
+            // removeSec()
+        })
+        const removeImg = async(endStr)=>{
+            const fileList = ffmpeg.FS("readdir", "/");
+            
+            fileList.forEach((item) => {
+                if (item.endsWith(endStr)) {
+                    ffmpeg.FS('unlink', item);
+                }
+            });
+        }
+        const  removeSec = async()=>{
+            let divObj = screenshotRef.value.handleCurDivider()
+            if (!divObj) return
+            let start = duration.value * divObj.dividerLeft.endXTime
+            let end = duration.value * divObj.dividerRight.endXTime
+
+            var inname = "test.mp4";
+            var outname = "divider.mp4"
+
+            // ffmpeg.FS("writeFile", inname, await fetchFile(file));
+            
+            await ffmpeg.run(
+                "-i",
+                inname,
+                "-vf",
+                "select='not(between(t,"+start+","+end+"))',setpts=N/FRAME_RATE/TB",
+                "-af",
+                "aselect='not(between(t,"+start+","+end+"))',asetpts=N/SR/TB",
+                outname
+            );
+
+            const vdata = ffmpeg.FS("readFile", outname);
+            const src = URL.createObjectURL(
+                new Blob([vdata.buffer], { type: "video/mp4" })
+            );
+
+            videoSrc.value = src
+
+
+        }
         onMounted(()=>{
             initFfmpeg()
         })
@@ -143,6 +204,7 @@ export default defineComponent({
             goUpload,
             changeTimeline,
             changeFile,
+            screenshotRef
         };
     },
 });
@@ -187,6 +249,7 @@ export default defineComponent({
     padding-top: 40px;
     height: 480px;
     box-sizing: border-box;
+    // opacity: 0;
     .video-prev {
         width: 600px;
     }

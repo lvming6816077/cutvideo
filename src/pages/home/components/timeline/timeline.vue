@@ -1,5 +1,5 @@
 <template>
-    <div class="wrap" :style="{width:(width-4)+'px'}">
+    <div class="wrap" :style="{width:(width)+'px'}">
         <div class="timeline-play-cursor" ref="timehd" @mousedown="mousedown">
             <div class="timeline-play-cursor-hd"  ></div>
             <div class="timeline-play-cursor-bd"></div>
@@ -8,7 +8,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, onMounted, reactive, onUnmounted } from "vue";
+import { defineComponent, ref, onMounted, watch, onUnmounted } from "vue";
 import _ from "lodash"
 
 export default defineComponent({
@@ -17,15 +17,24 @@ export default defineComponent({
         width:{
             type:Number,
             default:100
+        },
+        max:{
+            type:Number,
+            default:100
         }
     },
     setup(props,context) {
-        let width = props.width
         let dragFlag = ref(false)
         let startX = 0,moveX = 0,endX = 0
         let timehd = ref(null)
         let tranX = 0
-        const max = width-4,min = 0
+        let max = props.max,min = 0
+
+
+        watch(()=>props.max, (currentValue, oldValue) => {
+            max = currentValue
+        },{ deep: true });
+        // console.log(max)
 
         const mousedown = (e)=>{
             
@@ -44,6 +53,9 @@ export default defineComponent({
                 timehd.value.style.transform = 'translateX('+tranX+'px)'
 
                 context.emit('changeTimeline',tranX/(max-min),tranX)
+
+                e.preventDefault()
+                e.stopPropagation()
                 
             }
         }
@@ -61,7 +73,6 @@ export default defineComponent({
             document.removeEventListener('mouseup',mouseup)
         })
         return {
-            width,
             mousedown,
             timehd
         };
