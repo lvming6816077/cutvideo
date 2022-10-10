@@ -92,15 +92,7 @@ export default defineComponent({
         let deleteDivider = computed(() => store.state.deleteDivider)
         const changeTimeline = _.throttle((v,x)=>{
             var newV = duration.value * v;
-            for (var i = 0 ; i < deleteDivider.value.length ; i++) {
-                let start = duration.value * deleteDivider.value[i].dividerLeft.endXTime
-                let end = duration.value * deleteDivider.value[i].dividerRight.endXTime
-                if (newV > start && newV < end) {
-                    newV = end
-                }
-            }
-            
-            
+
             videoRef.value.currentTime = newV
         },30)
 

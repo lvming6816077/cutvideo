@@ -47,7 +47,7 @@ export default defineComponent({
             // debugger
             var deleteWidth = Math.abs(c.dividerLeft.endX-c.dividerRight.endX)
             var oriWidth = width-c.dividerRight.endX
-            console.log(width,c,oriWidth,deleteWidth)
+
             width = width-deleteWidth
             imglistOfflineCanvas = cutimage(width,height,c.dividerLeft.endX,c.dividerRight.endX,oriWidth,imglistOfflineCanvas)
             renderList(props.dwidth,props.dx)

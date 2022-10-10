@@ -2,6 +2,7 @@
 
 const genImgCanvas = (width,height,startX,endX,oriWidth,image) => {
     // 离屏canvas
+    // debugger
     let imglistOfflineCanvas = document.createElement('canvas');
     const imglistOfflineCtx = imglistOfflineCanvas.getContext('2d');
     imglistOfflineCanvas.style.width = width
@@ -19,7 +20,7 @@ const genImgCanvas = (width,height,startX,endX,oriWidth,image) => {
 
 
     
-    var dataURL = imglistOfflineCanvas.toDataURL()
+    var dataURL = image.toDataURL()
     dataURL = dataURL.replace("image/png", "image/octet-stream");
     var save_link = document.createElementNS('http://www.w3.org/1999/xhtml', 'a');
     save_link.href = dataURL;
@@ -27,7 +28,7 @@ const genImgCanvas = (width,height,startX,endX,oriWidth,image) => {
 
     var event = document.createEvent('MouseEvents');
     event.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-    save_link.dispatchEvent(event);
+    //save_link.dispatchEvent(event);
     
     return imglistOfflineCanvas
 

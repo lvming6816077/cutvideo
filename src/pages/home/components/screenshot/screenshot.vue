@@ -38,6 +38,7 @@ export default defineComponent({
     },
     setup(props,context) {
         const store = Vuex.useStore()
+        let duration = computed(()=>store.state.videoDuration)
         let min = 0
         let max = ref(880)
         let curIndex = ref(0)
@@ -102,12 +103,18 @@ export default defineComponent({
                 }
             }
             dividerList.list.splice(curIndex.value,1)
+            var prevMax = max.value
             max.value = max.value-deleteWidth
 
             setTimeout(()=>{
                 curIndex.value = curIndex.value-1
                 store.dispatch('setCurDivider',handleCurDivider())
                 store.dispatch('addDeleteDivider',deleteItem)
+
+                // store.dispatch('setVideoDuration',duration.value-(duration.value*(deleteWidth/prevMax)))
+                
+                // duration
+
             },200)
         }
 

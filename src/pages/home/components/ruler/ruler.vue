@@ -1,9 +1,11 @@
 <template>
-    <canvas id="ruler" ref="rulerCanvas"></canvas>
+    <canvas id="ruler" ref="rulerCanvas" :style="style"></canvas>
 </template>
 
 <script>
-import { defineComponent, ref, onMounted, reactive } from "vue";
+import { defineComponent, ref, onMounted, computed, watch, reactive } from "vue";
+import Vuex from 'vuex'
+import formatTime from "@/utils/times.js"
 
 export default defineComponent({
     name: "topheader",
@@ -15,11 +17,15 @@ export default defineComponent({
     },
     setup(props) {
         const rulerCanvas = ref(null)
+        const store = Vuex.useStore()
+        let duration = computed(() => store.state.videoDuration)
+        
+        const height = 30
         const getSize = (num) => {
-            return (1) * num;
+            return (2) * num;
         }
+        let style = reactive({width:props.width+'px',height:height+'px'})
         const drawRuler = () => {
-            const height = 30
             const rulerCtx = rulerCanvas.value.getContext('2d');
             rulerCanvas.value.width = getSize(props.width);
             rulerCanvas.value.height = getSize(height);
@@ -29,21 +35,30 @@ export default defineComponent({
             
             rulerCtx.textAlign = 'center';
             for (let i = 0; i < props.width; i += 10) {
-                if (i % 100 === 0) {
-                rulerCtx.fillRect (getSize(i), 0, getSize(1), getSize(10));
-                if (i) {
-                    rulerCtx.fillText(i, getSize(i), getSize(25))
-                }
+                // console.log(i%100)
+                if (i % 100 === 50) {
+                    rulerCtx.fillRect (getSize(i), 0, getSize(1), getSize(10));
+                    var text = formatTime(duration.value*(i/props.width))
+                    if (text&& duration.value) {
+                        
+                        rulerCtx.fillText(text, getSize(i+0), getSize(25))
+                    }
                 } else {
-                rulerCtx.fillRect (getSize(i), 0, getSize(1), getSize(5));
+                    rulerCtx.fillRect (getSize(i), 0, getSize(1), getSize(5));
                 }
             }
         }
+
+        watch(duration,(v)=>{
+            // console.log(v)
+            drawRuler()
+        })
 
         onMounted(()=>{
             drawRuler()
         })
         return {
+            style,
             rulerCanvas
         };
     },

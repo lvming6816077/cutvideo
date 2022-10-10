@@ -8,8 +8,9 @@
 </template>
 
 <script>
-import { defineComponent, ref, onMounted, watch, onUnmounted } from "vue";
+import { defineComponent, ref, onMounted, watch, onUnmounted,computed } from "vue";
 import _ from "lodash"
+import Vuex from "vuex"
 
 export default defineComponent({
     name: "timeline",
@@ -24,17 +25,20 @@ export default defineComponent({
         }
     },
     setup(props,context) {
+        const store = Vuex.useStore()
         let dragFlag = ref(false)
         let startX = 0,moveX = 0,endX = 0
         let timehd = ref(null)
         let tranX = 0
         let max = props.max,min = 0
+        
 
 
         watch(()=>props.max, (currentValue, oldValue) => {
             max = currentValue
         },{ deep: true });
-        // console.log(max)
+
+
 
         const mousedown = (e)=>{
             
@@ -52,16 +56,17 @@ export default defineComponent({
 
                 timehd.value.style.transform = 'translateX('+tranX+'px)'
 
-                context.emit('changeTimeline',tranX/(max-min),tranX)
-
                 e.preventDefault()
                 e.stopPropagation()
                 
             }
         }
+        let deleteDivider = computed(() => store.state.deleteDivider)
         const mouseup = (e)=>{
             dragFlag.value = false
             endX = tranX
+
+            getCurX(tranX)
         }
 
         onMounted(() => {
@@ -72,6 +77,20 @@ export default defineComponent({
             document.removeEventListener('mousemove',mousemove)
             document.removeEventListener('mouseup',mouseup)
         })
+
+        const getCurX = ()=>{
+            var dis = tranX
+            for (var i = 0 ; i < deleteDivider.value.length ; i++) {
+                let start = deleteDivider.value[i].dividerLeft.endX
+                let end = deleteDivider.value[i].dividerRight.endX
+                if (dis > start) {
+                    
+                    dis = dis+Math.abs(end-start)
+                }
+            }
+            console.log(dis)
+            context.emit('changeTimeline',dis/(880-min),dis)
+        }
         return {
             mousedown,
             timehd
